@@ -2,6 +2,10 @@
 #include <ArduinoJson.h>
 #include "RecipeDetails.h"
 #include "Recipe.h"
+#include "SDCardReader.h"
+
+
+// sDCardStatus SDCardStatus;
 
 // Based on this:
 // https://arduinojson.org/v6/assistant/
@@ -50,4 +54,5 @@ void RecipeDetails::updateMemory(JsonVariant variant) {
     JsonObject& root = variant;
 
     if (root.containsKey("steepLength")) Steep1.steepLength = root["steepLength"];
+    SDCardStatus.getRecipes = false;
 }

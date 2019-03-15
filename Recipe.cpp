@@ -2,4 +2,4 @@
 #include "Particle.h"
 
 
-steepRec Steep1 = {0, 0, 0, 0, 0, 0};
+steepRec Steep1 = {0, 1};
