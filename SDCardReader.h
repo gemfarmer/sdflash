@@ -12,6 +12,7 @@ class SDCardReader {
     void setupOpenLog(void);
     void createFile(char *fileName);
     void readFile(char *fileName);
+    void appendToFile(char *fileName);
     void readFirmware(char *fileName);
     // void readFirmwareRickkas(char *fileName);
     // void flashTinkerRickkas(File &firmwareFile);
@@ -27,6 +28,11 @@ struct sDCardStatus {
   bool getRecipes;
   bool hasBeenSetup;
   bool getFirmware;
+  bool isWriting;
+  bool isReading;
+  bool moreToWrite;
+  String dataToLog;
+  int currentOffset;
 };
 
 extern sDCardStatus SDCardStatus;

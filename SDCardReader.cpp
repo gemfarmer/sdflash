@@ -10,38 +10,46 @@
 
 RecipeDetails RecipeDetails;
 
-sDCardStatus SDCardStatus = {0, 0, 0};
+String helloWorld = "Hello Brian. Welcome to a world of pure imagination";
+sDCardStatus SDCardStatus = {0, 0, 0, 0, 0, 0, "", 0};
 
 void SDCardReader::poll() {
-  if (SDCardStatus.getRecipes == 1 || SDCardStatus.getFirmware == 1 ) {
-    randomSeed(analogRead(A0)); //Use the analog pins for a good seed value
-    int fileNumber = random(999); //Select a random file #, 0 to 999
-    char fileName[12]; //Max file name length is "12345678.123" (12 characters)
+  if (SDCardStatus.isReading == 1) {
+    if (SDCardStatus.getRecipes == 1 || SDCardStatus.getFirmware == 1) {
+      // randomSeed(analogRead(A0)); //Use the analog pins for a good seed value
+      // int fileNumber = random(999); //Select a random file #, 0 to 999
+      // char fileName[12]; //Max file name length is "12345678.123" (12 characters)
 
-    Serial.println("Steep Length Before:");
-    Serial.println(Steep1.steepLength);
+      Serial.println("Steep Length Before:");
+      Serial.println(Steep1.steepLength);
 
-    //Now let's read back
+      //Now let's read back
+      gotoCommandMode(); //Puts OpenLog in command mode
+
+      if (SDCardStatus.getRecipes == 1) {
+        readFile("recipe.txt");
+      } else if (SDCardStatus.getFirmware == 1) {
+        readFirmware("conf_ph.bin");
+      } else {
+        Serial1.write(13); //This is \r
+        Serial.println("out of command mode");
+      }
+
+      //Now let's read back
+      readDisk(); //Check the size and stats of the SD card
+
+      Serial.println();
+      Serial.println("File read complete");
+      Serial.println("Steep Length After:");
+      Serial.println(Steep1.steepLength);
+      //Infinite loop
+      Serial.println("Yay!");
+    }
+  } else if (SDCardStatus.isWriting == 1 && SDCardStatus.moreToWrite == 1) {
+    Serial.println("SDCardStatus.isWriting == 1 && SDCardStatus.moreToWrite == 1");
     gotoCommandMode(); //Puts OpenLog in command mode
 
-    if (SDCardStatus.getRecipes == 1) {
-      readFile("recipe.txt");
-    } else if (SDCardStatus.getFirmware == 1) {
-      readFirmware("conf_ph.bin");
-    } else {
-      Serial1.write(13); //This is \r
-      Serial.println("out of command mode");
-    }
-
-    //Now let's read back
-    readDisk(); //Check the size and stats of the SD card
-
-    Serial.println();
-    Serial.println("File read complete");
-    Serial.println("Steep Length After:");
-    Serial.println(Steep1.steepLength);
-    //Infinite loop
-    Serial.println("Yay!");
+    appendToFile("datalog.txt");
   }
 }
 
@@ -148,6 +156,27 @@ void SDCardReader::readFile(char *fileName) {
   //It will also print the '>' character. This is the OpenLog telling us it is done reading the file.
 
   //This function leaves OpenLog in command mode
+}
+
+void SDCardReader::appendToFile(char *fileName) {
+
+  //Old way
+  Serial1.print("append ");
+  Serial1.print(fileName);
+  Serial1.write(13); //This is \r
+
+  //Wait for OpenLog to indicate file is open and ready for writing
+  while (1) {
+    if (Serial1.available())
+      if (Serial1.read() == '<') break;
+  }
+  Serial.print("writing ");
+  Serial.print(SDCardStatus.dataToLog);
+  Serial.print(" to ");
+  Serial.println(fileName);
+  Serial1.write(SDCardStatus.dataToLog);
+  Serial1.write(13); //This is \r
+  SDCardStatus.moreToWrite = false;
 }
 
 
