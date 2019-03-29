@@ -20,8 +20,8 @@ void setup() {
 void loop() {
   SDCardReader.poll();
   delay(3000);
-  SDCardStatus.getRecipes = true;
-  // SDCardStatus.getFirmware = true;
+  // SDCardStatus.getRecipes = true;
+  SDCardStatus.getFirmware = true;
   SDCardStatus.isReading = true;
   // SDCardStatus.isWriting = true;
 

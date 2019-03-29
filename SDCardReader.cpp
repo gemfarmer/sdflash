@@ -29,7 +29,8 @@ void SDCardReader::poll() {
       if (SDCardStatus.getRecipes == 1) {
         readFile("recipe.txt");
       } else if (SDCardStatus.getFirmware == 1) {
-        readFirmware("conf_ph.bin");
+        // readFirmware("conf_ph.bin");
+        readFirmware("hello.txt");
       } else {
         Serial1.write(13); //This is \r
         Serial.println("out of command mode");
@@ -113,10 +114,6 @@ void SDCardReader::readFile(char *fileName) {
   Serial1.print(fileName);
   Serial1.write(13); //This is \r
 
-  //New way
-  //OpenLog.print("read ");
-  //OpenLog.println(filename); //regular println works with OpenLog v2.51 and above
-
   //The OpenLog echos the commands we send it by default so we have 'read log823.txt\r' sitting
   //in the RX buffer. Let's try to not print this.
   while(1) {
@@ -177,6 +174,7 @@ void SDCardReader::appendToFile(char *fileName) {
   Serial1.write(SDCardStatus.dataToLog);
   Serial1.write(13); //This is \r
   SDCardStatus.moreToWrite = false;
+  SDCardStatus.dataToLog = "";
 }
 
 
@@ -198,7 +196,7 @@ int SDCardReader::getFileSize(char *fileName) {
   String totalString = "";
   for(int timeOut = 0 ; timeOut < 1000 ; timeOut++) {
     while(Serial1.available()) {
-      char tempString[100];
+      char tempString[4000];
       int spot = 0;
       while(Serial1.available()) {
             tempString[spot++] = Serial1.read();
@@ -214,11 +212,7 @@ int SDCardReader::getFileSize(char *fileName) {
     delay(1);
   }
 
-  // Serial.write("fileLength ");
-  // Serial.write(totalString);
-
   fileSize = totalString.toInt();
-  // sscanf(totalString, "%zu", fileSize);
   return fileSize;
 }
 
@@ -246,22 +240,75 @@ void SDCardReader::readFirmware(char *fileName) {
   //above 38400bps.
   //This loop will stop listening after 1 second of no characters received
 
+  // char file_bytes[sizeFile];
+  // for(int _timeOut = 0 ; _timeOut < 1000 ; _timeOut++) {
+  //   while(Serial1.available()) {
+  //     int spot = 0;
+  //     while(Serial1.available()) {
+  //       file_bytes[spot++] = Serial1.read();
+  //       if(spot > sizeFile) break;
+
+  //     }
+  //     // Serial.write(file_bytes);
+  //     _timeOut = 0;
+  //   }
+
+  //   delay(1);
+  // }
+  //
   char file_bytes[sizeFile];
-  for(int _timeOut = 0 ; _timeOut < 2000 ; _timeOut++) {
+  String totalString = "";
+  for(int timeOut = 0 ; timeOut < 800 ; timeOut++) {
     while(Serial1.available()) {
+      char tempString[sizeFile];
       int spot = 0;
       while(Serial1.available()) {
-            file_bytes[spot++] = Serial1.read();
-            if(spot > sizeFile) break;
+            tempString[spot++] = Serial1.read();
+            if(spot > (sizeFile - 2)) break;
 
       }
-           Serial.write(file_bytes);
-           _timeOut = 0;
+           // tempString[spot] = '\0';
+           Serial.write(tempString);
+      // Serial.write(totalString);//Take the string from OpenLog and push it to the Arduino terminal
+           totalString += tempString;
+           // timeOut = 0;
     }
 
     delay(1);
   }
+  int beginning = (totalString.indexOf('\r') || totalString.indexOf('\n') || 0) + 1;
+  String subString = totalString.substring(beginning, totalString.lastIndexOf('\r'));
+
+  Serial.print("totalString.lastIndexOf('\r')=");
+  Serial.println(totalString.lastIndexOf('\r'));
+  Serial.print("totalString.indexOf('\r')=");
+  Serial.println(totalString.indexOf('\r'));
+  Serial.print("totalString.indexOf('\n')=");
+  Serial.println(totalString.indexOf('\n'));
+  Serial.print("beginning=");
+  Serial.println(beginning);
+  // Serial.println(subString.length());
+  // Add additional character for null terminator
+  subString.toCharArray(file_bytes, subString.length() + 1);
+
+  // totalString.toCharArray(file_bytes, totalString.length());
+
   uint8_t file_bytes_ = *file_bytes;
+  Serial.print("sizeFile=");
+  Serial.println(sizeFile);
+  Serial.print("totalString=");
+  Serial.println(totalString);
+  Serial.println(totalString.length());
+  Serial.print("subString=");
+  Serial.println(subString);
+  Serial.print("file_bytes_=");
+  Serial.println(file_bytes_);
+  Serial.print("(char*)file_bytes_=");
+  Serial.println((char*)file_bytes_);
+  Serial.print("file_bytes=");
+  Serial.println(file_bytes);
+  Serial.print("(char*)&file_bytes_=");
+  Serial.println((char*)&file_bytes_);
   updateFirmwareFromFile(&file_bytes_);
 }
 
@@ -298,8 +345,13 @@ void SDCardReader::updateFirmwareFromFile(uint8_t* file_bytes) {
       file.chunk_size = (file.file_length - offset);
     }
 
+    // Serial.print("(char*)&file_bytes=");
+    // Serial.println((char*)&file_bytes);
+    // Serial.print("(char*)file_bytes=");
+    // Serial.println((char*)file_bytes);
+    // malloc for 512 bytes
     Serial.printlnf("chunk_address=0x%x chunk_size=%d (%d < %d == %s)", file.chunk_address, file.chunk_size, offset, file.file_length, (offset < file.file_length) ? "continue" : "break");
-    result = Spark_Save_Firmware_Chunk(file, &file_bytes[offset], NULL);
+    // result = Spark_Save_Firmware_Chunk(file, &file_bytes[offset], NULL);
 
     if (result != 0) {
       Serial.printlnf("save chunk failed %d", result);
