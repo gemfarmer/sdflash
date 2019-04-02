@@ -3,9 +3,11 @@
 
 #include "system_update.h"
 #include <ArduinoJson.h>
+#include <Base64.h>
 #include "SDCardReader.h"
 #include "RecipeDetails.h"
 #include "Recipe.h"
+
 // #include "SdFat.h"
 
 RecipeDetails RecipeDetails;
@@ -235,40 +237,20 @@ void SDCardReader::readFirmware(char *fileName) {
       if(Serial1.read() == '\r') break;
   }
 
-  //This will listen for characters coming from OpenLog and print them to the terminal
-  //This relies heavily on the SoftSerial buffer not overrunning. This will probably not work
-  //above 38400bps.
-  //This loop will stop listening after 1 second of no characters received
 
-  // char file_bytes[sizeFile];
-  // for(int _timeOut = 0 ; _timeOut < 1000 ; _timeOut++) {
-  //   while(Serial1.available()) {
-  //     int spot = 0;
-  //     while(Serial1.available()) {
-  //       file_bytes[spot++] = Serial1.read();
-  //       if(spot > sizeFile) break;
-
-  //     }
-  //     // Serial.write(file_bytes);
-  //     _timeOut = 0;
-  //   }
-
-  //   delay(1);
-  // }
-  //
-  char file_bytes[sizeFile];
   String totalString = "";
-  for(int timeOut = 0 ; timeOut < 800 ; timeOut++) {
+  for(int timeOut = 0 ; timeOut < 1000 ; timeOut++) {
     while(Serial1.available()) {
       char tempString[sizeFile];
       int spot = 0;
       while(Serial1.available()) {
+
             tempString[spot++] = Serial1.read();
-            if(spot > (sizeFile - 2)) break;
+            if(spot > sizeFile) break;
 
       }
            // tempString[spot] = '\0';
-           Serial.write(tempString);
+           // Serial.write(tempString);
       // Serial.write(totalString);//Take the string from OpenLog and push it to the Arduino terminal
            totalString += tempString;
            // timeOut = 0;
@@ -279,36 +261,97 @@ void SDCardReader::readFirmware(char *fileName) {
   int beginning = (totalString.indexOf('\r') || totalString.indexOf('\n') || 0) + 1;
   String subString = totalString.substring(beginning, totalString.lastIndexOf('\r'));
 
-  Serial.print("totalString.lastIndexOf('\r')=");
-  Serial.println(totalString.lastIndexOf('\r'));
-  Serial.print("totalString.indexOf('\r')=");
-  Serial.println(totalString.indexOf('\r'));
-  Serial.print("totalString.indexOf('\n')=");
-  Serial.println(totalString.indexOf('\n'));
-  Serial.print("beginning=");
-  Serial.println(beginning);
-  // Serial.println(subString.length());
+  Serial.print("subString, before=");
+  Serial.println(subString.length() + 1);
+  subString.replace("\n", "");
+  subString.replace("\r", "");
+  subString.replace("\"", "");
+  subString.replace("<", "");
+  subString.replace(">", "");
+  subString.replace("#", "");
+  subString.replace("%", "");
+  subString.replace("{", "");
+  subString.replace("}", "");
+  subString.replace("|", "");
+  subString.replace("\\", "");
+  subString.replace("^", "");
+  subString.replace("~", "");
+  subString.replace("[", "");
+  subString.replace("]", "");
+  subString.replace("`", "");
+  //
+  subString.replace("$", "");
+  subString.replace("-", "");
+  subString.replace("_", "");
+  subString.replace(".", "");
+  subString.replace("+", "");
+  subString.replace("!", "");
+  subString.replace("*", "");
+  subString.replace("'", "");
+  subString.replace("(", "");
+  subString.replace(")", "");
+  subString.replace(",", "");
+  subString.trim();
   // Add additional character for null terminator
-  subString.toCharArray(file_bytes, subString.length() + 1);
 
-  // totalString.toCharArray(file_bytes, totalString.length());
+
+  int file_bytes_buffer = subString.length() + 1;
+  // int file_bytes_buffer = 9;
+  Serial.print("file_bytes_buffer=");
+  Serial.println(file_bytes_buffer);
+  char file_bytes[file_bytes_buffer];
+  subString.toCharArray(file_bytes, file_bytes_buffer);
+  // char file_bytes[] = "Zm9vYmFy";
+  for (int i = 0; i < subString.length() + 1; ++i)
+  {
+    Serial.print("i=");
+    Serial.print(i);
+    Serial.printf(" subString.charAt(%d)=", i);
+    Serial.print(subString.charAt(i));
+    Serial.print(" subString.substring()=");
+    Serial.print(subString.substring(i, i + 1));
+    Serial.print(" indexOf('')=");
+    Serial.println(subString.lastIndexOf(""));
+  }
+
+  // char test[] = "Zm9vYmFy";
+  // int test_len = sizeof(test);
+  // int decoded_test_len = base64_dec_len(test, test_len);
+  // Serial.print("test_len=");
+  // Serial.println(test_len);
+  // char decoded_test[decoded_test_len];
+
+  // base64_decode(decoded_test, test, test_len);
+
+  int file_bytes_len = sizeof(file_bytes);
+  // int file_bytes_len = 9;
+  Serial.print("file_bytes_len=");
+  Serial.println(file_bytes_len);
+  int decodedLen = base64_dec_len(file_bytes, file_bytes_len);
+  char decoded[decodedLen];
+
+  Serial.print("decodedLen=");
+  Serial.println(decodedLen);
+  // Serial.print("test=");
+  // Serial.println(test);
+  // Serial.print("decoded_test_len=");
+  // Serial.println(decoded_test_len);
+
+  base64_decode(decoded, file_bytes, file_bytes_len);
+
 
   uint8_t file_bytes_ = *file_bytes;
   Serial.print("sizeFile=");
   Serial.println(sizeFile);
-  Serial.print("totalString=");
-  Serial.println(totalString);
-  Serial.println(totalString.length());
   Serial.print("subString=");
   Serial.println(subString);
-  Serial.print("file_bytes_=");
-  Serial.println(file_bytes_);
-  Serial.print("(char*)file_bytes_=");
-  Serial.println((char*)file_bytes_);
-  Serial.print("file_bytes=");
-  Serial.println(file_bytes);
-  Serial.print("(char*)&file_bytes_=");
-  Serial.println((char*)&file_bytes_);
+  // Serial.print("file_bytes=");
+  // Serial.println(file_bytes);
+  Serial.print("decoded=");
+  Serial.println(decoded);
+  // Serial.print("decoded_test=");
+  // Serial.println(decoded_test);
+
   updateFirmwareFromFile(&file_bytes_);
 }
 
@@ -350,7 +393,7 @@ void SDCardReader::updateFirmwareFromFile(uint8_t* file_bytes) {
     // Serial.print("(char*)file_bytes=");
     // Serial.println((char*)file_bytes);
     // malloc for 512 bytes
-    Serial.printlnf("chunk_address=0x%x chunk_size=%d (%d < %d == %s)", file.chunk_address, file.chunk_size, offset, file.file_length, (offset < file.file_length) ? "continue" : "break");
+    // Serial.printlnf("chunk_address=0x%x chunk_size=%d (%d < %d == %s)", file.chunk_address, file.chunk_size, offset, file.file_length, (offset < file.file_length) ? "continue" : "break");
     // result = Spark_Save_Firmware_Chunk(file, &file_bytes[offset], NULL);
 
     if (result != 0) {
